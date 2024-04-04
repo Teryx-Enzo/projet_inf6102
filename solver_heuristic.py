@@ -127,14 +127,15 @@ def choix_piece(i,j,solution,pieces,puzzle:EternityPuzzle):
         for k in range(0,4):
             
             piece_permuted = puzzle.generate_rotation(piece)[k]
-            score = points_communs(couleurs_voisins,piece_permuted)
+            score = points_communs(piece_permuted,couleurs_voisins)
             if score > best_score_piece:
                 best_score_piece = score
 
         scores.append(best_score_piece)
     
-
+    
     best = np.argmax(scores)
+    
     if isinstance(best,np.ndarray):
         best_piece = pieces_possibles[best[0]]
     else:
@@ -151,8 +152,13 @@ def points_communs(tuple1,tuple2):
     score = 0
 
     for i in range(len(tuple1)):
-        if tuple1[i] == tuple2[i]:
-            score += 1
+        if tuple1[i] == tuple2[i]==0:
+            score += 2
+
+        elif tuple1[i] == tuple2[i]:
+            score +=1
+        elif tuple1[i] == 0 :
+            score -= 1
 
 
     return score
