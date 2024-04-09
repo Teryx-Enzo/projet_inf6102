@@ -1,0 +1,8 @@
+Instance: C, Score: 17, Execution Time: 578.1363 seconds
+Instance: B, Score: 7, Execution Time: 1145.0392 seconds
+Instance: C, Score: 18, Execution Time: 1141.7787 seconds
+Instance: D, Score: 18, Execution Time: 1105.7148 seconds
+Instance: B, Score: 5, Execution Time: 1170.5649 seconds
+Instance: C, Score: 16, Execution Time: 1136.5678 seconds
+Instance: B, Score: 6, Execution Time: 54.2927 seconds
+Instance: B, Score: 6, Execution Time: 111.6162 seconds

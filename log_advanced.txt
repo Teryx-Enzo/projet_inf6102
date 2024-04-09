@@ -1,0 +1,15 @@
+Instance: D, Score: 29, Execution Time: 50.9150 seconds
+Instance: B, Score: 9, Execution Time: 52.9734 seconds
+Instance: C, Score: 22, Execution Time: 50.4645 seconds
+Instance: B, Score: 9, Execution Time: 347.4613 seconds
+Instance: B, Score: 11, Execution Time: 259.7199 seconds
+Instance: B, Score: 11, Execution Time: 241.6006 seconds
+Instance: B, Score: 11, Execution Time: 1432.3721 seconds
+Instance: B, Score: 11, Execution Time: 313.2109 seconds
+Instance: B, Score: 11, Execution Time: 312.2399 seconds
+Instance: B, Score: 11, Execution Time: 336.1320 seconds
+Instance: B, Score: 11, Execution Time: 68.6348 seconds
+Instance: B, Score: 11, Execution Time: 80.7822 seconds
+Instance: B, Score: 11, Execution Time: 80.7373 seconds
+Instance: B, Score: 11, Execution Time: 156.4366 seconds
+Instance: B, Score: 6, Execution Time: 148.8537 seconds
