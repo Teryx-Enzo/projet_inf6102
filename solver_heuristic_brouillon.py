@@ -13,6 +13,76 @@ SUD = 1
 OUEST = 2
 EST = 3
 
+def build_wall(pieces,board_size):
+
+    """
+    On rempli le mur dans cet ordre:
+
+
+    2 3 4
+    1   5
+    0 7 6
+    """
+
+    solution = np.array((0,0,0,0) for i in range(board_size*4 -2))
+
+    coins= [piece for piece in pieces if np.count_nonzero(piece) == 2]
+
+    bords = [piece for piece in pieces if np.count_nonzero(piece) == 3]
+
+def coin_valide(solution, last_position,board_size):
+
+
+    match last_position//(board_size-1) :
+        #on est sur le bord de droite
+        case 0:
+            return solution[last_position-1][NORD]==solution[last_position][SUD]
+
+        case 1:
+        #on est sur le bord du haut
+            return solution[last_position-1][EST]==solution[last_position][OUEST]
+
+        case 2:
+        #on est sur le bord de gauche
+            return solution[last_position-1][SUD]==solution[last_position][NORD]
+
+        case 3:
+        #on est sur le bord de droite
+            return solution[last_position-1][OUEST]==solution[last_position][EST]
+
+
+def bord_valide(solution, last_position,board_size):
+
+
+    """
+    Args:
+        Solution List[Tuple] : liste des pièces du bord, ne constitue pas une solution acceptable pour le puzzle complet
+    
+    
+    
+    """
+    if last_position == len(solution-1):
+        return solution[0][EST]==solution[last_position][OUEST]
+    
+    else :  #TODO verfi orientation GRIS    
+        match last_position//(board_size-1) :
+            #on est sur le bord de droite
+            case 0:
+                return solution[last_position-1][NORD]==solution[last_position][SUD]
+
+            case 1:
+            #on est sur le bord du haut
+                return solution[last_position-1][EST]==solution[last_position][OUEST]
+
+            case 2:
+            #on est sur le bord de gauche
+                return solution[last_position-1][SUD]==solution[last_position][NORD]
+
+            case 3:
+            #on est sur le bord de droite
+                return solution[last_position-1][OUEST]==solution[last_position][EST]
+
+    
 
 
 

@@ -51,8 +51,7 @@ def log_execution(instance, score, execution_time):
         log_file.write(log_message)
 
 def deux_swap(pieces, puzzle, board_size):
-    """
-    """
+
     couleurs_des_voisins = [couleurs_voisins(k, pieces, board_size) for k in range(len(pieces))]
     n = len(pieces)
     deux_swap_neigh = []
@@ -76,26 +75,87 @@ def deux_swap(pieces, puzzle, board_size):
                     deux_swap_neigh.append((cout_swap,neigh))
     return deux_swap_neigh
 
+
+def get_no_edged_bad_pieces(pieces,board_size,couleurs_des_voisins):
+
+    #on récupère toutes les tuiles impliquées dans un conflit
+
+   
+    mauvaises_tuiles = [k for k in range(len(pieces)) if nb_conflits(pieces[k],couleurs_des_voisins[k])]
+    
+    #on supprime les tuiles adjcentes et les bords
+    for k in mauvaises_tuiles:
+        if GRIS in pieces[k]:
+            mauvaises_tuiles.remove(k)
+        if k+1 in mauvaises_tuiles:
+            mauvaises_tuiles.remove(k+1)
+        if k+board_size in mauvaises_tuiles:
+            mauvaises_tuiles.remove(k+board_size)
+
+
+    return mauvaises_tuiles
+
+def create_cost_matrix(solution,mauvaises_tuiles,couleurs_voisins,puzzle):
+
+    m = len(mauvaises_tuiles)
+    pieces_gen_rotations = [puzzle.generate_rotation(solution[mauvaises_tuiles[i]]) for i in range(m)]
+    matrice_cost = np.zeros((m,m))
+    rotation = np.zeros((m,m), dtype = np.int8)
+
+
+    for i in range(m):
+        for j in range(m):
+            couts = [nb_conflits(pieces_gen_rotations[i][k],couleurs_voisins[mauvaises_tuiles[j]]) for k in range(4)]
+            rotation[i][j] = int(np.argmin(couts))
+            matrice_cost[i][j] = np.min(couts)
+
+
+    return matrice_cost, rotation
+
+def get_best_assignement(matrice_cost):
+
+    alg = HungarianAlg(matrice_cost)
+    alg.solve()
+
+    return alg.solution
+
+def move_hungarian(solution,board_size,puzzle,n_tuiles):
+
+    print("on cherche")
+
+    couleurs_des_voisins = [couleurs_voisins(k, solution, board_size) for k in range(len(solution))]
+
+
+    mauvaises_tuiles = np.random.choice(get_no_edged_bad_pieces(solution,board_size,couleurs_des_voisins), size  = n_tuiles,replace = None)
+
+    matrice_cost, rotation = create_cost_matrix(solution,mauvaises_tuiles, couleurs_des_voisins, puzzle)
+
+    
+    print("on calcule")
+    meilleur_assignement = get_best_assignement(matrice_cost)
+    print(meilleur_assignement)
+
+    new_sol = solution.copy()
+    print(rotation)
+    for index,assignement in meilleur_assignement.items():
+        new_sol[assignement] = puzzle.generate_rotation(solution[mauvaises_tuiles[index]])[rotation[index][assignement]]
+
+    print('nouvelle_soltuon_hongroise')
+
+    return new_sol
+
         
 
-def couleurs_voisins(i : int,pieces : list[tuple],board_size : int):
-    """
-    Args:
-        i  (int) : position de la pièce dans la matrice
-        pieces (List[tuple]) : matrice des pièces du puzzle
-        board_size (int) : taille du plateau
-    
-    """
+def couleurs_voisins(i,pieces,board_size):
 
 
-    #on récupère les indices des voisins de la pièce
+
     k_est_1 = i + 1
     k_ouest_1 = i - 1
     k_sud_1 = i - board_size
     k_nord_1 = i + board_size
 
 
-    #On récupère les couleurs des voisins
     if i < board_size:
         c_sud_1 = GRIS
 
@@ -125,7 +185,7 @@ def couleurs_voisins(i : int,pieces : list[tuple],board_size : int):
 
 def calcul_cout_swap(piece_1,piece_2,couleurs_voisins_1,couleurs_voisins_2):
 
-    
+
     cout = nb_conflits(piece_1,couleurs_voisins_1) +nb_conflits(piece_2,couleurs_voisins_2)
 
     
@@ -171,12 +231,12 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 360
+    time_credit = 3600
     board_size = puzzle.board_size
     
 
 
-    listeTabu = Tabu(20000)
+    listeTabu = Tabu(2000)
     # Recherche
     while ((time()-t0) + iteration_duration) < time_credit - 5:
 
@@ -188,13 +248,21 @@ def solve_advanced(eternity_puzzle):
         #restart aléatoire depuis la solution initiale
         random.shuffle(puzzle.piece_list)
 
-        #current_solution, current_n_conflict = solve_heuristic(puzzle)
-        current_solution, current_n_conflict = puzzle.piece_list, eternity_puzzle.get_total_n_conflict(puzzle.piece_list)
+        current_solution, current_n_conflict = solve_heuristic(puzzle)
         listeTabu.add(current_solution)
         best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
         temp = 10
 
-        for i in tqdm(range(1000)):
+        for i in tqdm(range(200)):
+
+            """if i%20 ==19:
+
+                print(current_n_conflict)
+                solution = move_hungarian(current_solution,board_size,puzzle,5)
+
+                n_conflict = puzzle.get_total_n_conflict(solution)
+
+                print(n_conflict)"""
 
 
             
@@ -220,7 +288,7 @@ def solve_advanced(eternity_puzzle):
 
                         delta = n_conflict - current_n_conflict
 
-                        if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
+                        if delta <= 0 or np.random.random()<0.01:#or np.random.rand() < np.exp(-delta/temp):
                             current_solution, current_n_conflict = solution, n_conflict
 
 
