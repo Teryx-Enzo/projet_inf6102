@@ -48,7 +48,7 @@ def log_execution(instance, score, execution_time):
     log_message = f"Instance: {instance}, Score: {score}, Execution Time: {execution_time:.4f} seconds\n"
     
     # Write log message to file
-    with open(path.join("os", "log_advanced.txt"), "a") as log_file:
+    with open(path.join("log", "log_advanced.txt"), "a") as log_file:
         log_file.write(log_message)
 
 def deux_swap(pieces, puzzle, board_size):
@@ -313,7 +313,7 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 60
+    time_credit = 300
     board_size = puzzle.board_size
     
 
@@ -321,88 +321,46 @@ def solve_advanced(eternity_puzzle):
     listeTabu = Tabu(5)
     # Recherche
     while ((time()-t0) + iteration_duration) < time_credit - 5:
-
-        
-
+        # Temps de début du restart
         t1 = time()
 
         puzzle = copy.deepcopy(eternity_puzzle)
         #restart aléatoire depuis la solution initiale
         random.shuffle(puzzle.piece_list)
 
-        #current_solution, current_n_conflict = solve_heuristic(puzzle)
-        current_solution, current_n_conflict = puzzle.piece_list, eternity_puzzle.get_total_n_conflict(puzzle.piece_list)
-        listeTabu.add(current_solution)
+        current_solution, current_n_conflict = solve_heuristic(puzzle)
         best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
-        temp = 5
+        temp = 10
 
-        
-        for i in tqdm(range(80)):
+        listeTabu = Tabu(5)
 
-
-            
+        for i in range(100):
             # On choisit un voisin au hasard, et on le garde s'il est améliorant ou selon une probabilité dépendant de son coût et de la température.
-            choses = deux_swap(current_solution, puzzle,board_size)
-            print(min([truc[0] for truc in choses]))
-            solution_possibles = sorted(deux_swap(current_solution, puzzle,board_size), key=lambda k: k[0])
-            print(solution_possibles[0][0])
-            #solution_possibles = sorted(deux_swap_with_worst_piece(current_solution, puzzle,board_size), key=lambda k: k[0])
+            solution = sorted(deux_swap(current_solution, puzzle, board_size),key= lambda x : x[0])[0][1]
 
-            
-            
-            
-            selected = False
-            k = 0
-            while not selected :
+            if solution not in listeTabu:
+                listeTabu.add(solution)
+                n_conflict = puzzle.get_total_n_conflict(solution)
+
+                delta = n_conflict - current_n_conflict
+
+                if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
+                    current_solution, current_n_conflict = solution, n_conflict
+
+                    # On choisit comme représentation courante le meilleur voisin
+
+                if current_n_conflict < best_n_conflict_restart:
+                    best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
                 
-                solution = solution_possibles[k][1]
-                
-                if not solution in listeTabu:
-                    #print("cout_retenu",solution_possibles[i][0] )
-                    selected = True
-                    listeTabu.add(solution)
-                else : 
-
-                    k+=1
-                    
-            n_conflict = puzzle.get_total_n_conflict(solution)
-
-            
-
-            delta = n_conflict - current_n_conflict
-
-            
-
-
-            if delta < 0 or np.random.random()<0.1:#or np.random.rand() < np.exp(-delta/temp):
-                # On choisit comme représentation courante le meilleur voisin
-                current_solution, current_n_conflict = solution, n_conflict
-                #print(current_n_conflict)
-            else : break
-
-
-                   
-            
-                
-
-            if current_n_conflict <= best_n_conflict_restart:
-                
-                best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
-
-            
-            temp *= 0.98
+                temp *= 0.99
 
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
             best_solution = best_solution_restart
-        
-
-
-
+            print(best_n_conflict)
         
         iteration_duration = time() - t1
 
+    log_execution(dict_board_size_instance[eternity_puzzle.board_size], best_n_conflict, time()-t0)
 
-    #log_execution(dict_board_size_instance[eternity_puzzle.board_size],best_n_conflict,time()-t0)
     return  best_solution, best_n_conflict
-
