@@ -215,7 +215,17 @@ def couleurs_voisins(i : int,pieces : list[tuple],board_size : int):
     return (c_nord_1 ,c_sud_1,c_ouest_1,c_est_1)
 
 def calcul_cout_swap(piece_1,piece_2,couleurs_voisins_1,couleurs_voisins_2):
+    """
+    Give the total number of conflicts of two pieces in the matrice
+    Args:
+        piece_1 (Tuple[int])
+        piece_2 (Tuple[int])
+        couleurs_voisins_1 (Tuple[int])
+        couleurs_voisins_2 (Tuple[int])
+    Returns:
+        cout (Int) : total number of conflictsS
 
+    """
     
     cout = nb_conflits(piece_1,couleurs_voisins_1) +nb_conflits(piece_2,couleurs_voisins_2)
 
