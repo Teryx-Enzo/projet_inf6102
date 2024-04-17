@@ -14,11 +14,6 @@ OUEST = 2
 EST = 3
 
 
-
-
-
-
-
 def solve_heuristic(eternity_puzzle):
     """
     Heuristic solution of the problem
@@ -26,11 +21,8 @@ def solve_heuristic(eternity_puzzle):
     :return: a tuple (solution, cost) where solution is a list of the pieces (rotations applied) and
         cost is the cost of the solution
     """
-    # TODO implement here your solution
     solution = [(23,23,23,23)] * eternity_puzzle.board_size**2
     remaining_piece = copy.deepcopy(eternity_puzzle.piece_list)
-
-    
 
     # shuffle the pieces
     # take the orientation that works the best

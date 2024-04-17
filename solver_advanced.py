@@ -48,7 +48,7 @@ def log_execution(instance, score, execution_time):
     log_message = f"Instance: {instance}, Score: {score}, Execution Time: {execution_time:.4f} seconds\n"
     
     # Write log message to file
-    with open(path.join("os", "log_advanced.txt"), "a") as log_file:
+    with open(path.join("log", "log_advanced.txt"), "a") as log_file:
         log_file.write(log_message)
 
 def deux_swap(pieces, puzzle, board_size):
