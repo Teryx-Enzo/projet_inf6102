@@ -5,6 +5,7 @@ from copy import deepcopy
 from itertools import combinations
 from math import comb
 from time import time
+from os import path
 
 
 from solver_heuristic import solve_heuristic
@@ -46,7 +47,7 @@ def log_execution(instance, score, execution_time):
     log_message = f"Instance: {instance}, Score: {score}, Execution Time: {execution_time:.4f} seconds\n"
     
     # Write log message to file
-    with open("log_local_search.txt", "a") as log_file:
+    with open(path.join("os", "log_local_search.txt"), "a") as log_file:
         log_file.write(log_message)
 
 def deux_swap_un_seul_valide(pieces,puzzle):
