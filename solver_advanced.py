@@ -48,35 +48,45 @@ def log_execution(instance, score, execution_time):
     log_message = f"Instance: {instance}, Score: {score}, Execution Time: {execution_time:.4f} seconds\n"
     
     # Write log message to file
-    with open(path.join("log", "log_advanced.txt"), "a") as log_file:
+    with open(path.join("os", "log_advanced.txt"), "a") as log_file:
         log_file.write(log_message)
 
 def deux_swap(pieces, puzzle, board_size):
     """
     """
-    couleurs_des_voisins = [couleurs_voisins(k, pieces, board_size) for k in range(len(pieces))]
     n = len(pieces)
+    couleurs_des_voisins = [couleurs_voisins(k, pieces, board_size) for k in range(n)]
+
+
     deux_swap_neigh = []
     pieces_gen_rotations = [puzzle.generate_rotation(pieces[i]) for i in range(n)]
 
 
-    for i in range(n):
-        for j in range(i, n):
-            couleurs_voisins_1 = couleurs_des_voisins[i]
-            couleurs_voisins_2 = couleurs_des_voisins[j]
-            piece1_old = pieces[i]
-            piece2_old = pieces[j]
-            old_conflict = calcul_cout_swap(piece1_old, piece2_old, couleurs_voisins_1, couleurs_voisins_2)
-            for k in range(4):
-                for m in range(4):
-                    neigh = pieces.copy() 
-                    piece1 = pieces_gen_rotations[i][k]
-                    piece2 = pieces_gen_rotations[j][m]
-                    neigh[i], neigh[j] = piece2, piece1
-                    cout_swap = calcul_cout_swap(piece2, piece1, couleurs_voisins_1, couleurs_voisins_2) - old_conflict
-                    deux_swap_neigh.append((cout_swap,neigh))
-    return deux_swap_neigh
+    
 
+    for i in range(n):
+        for j in range(n):
+            if j!=i:
+                for k in range(4):
+                    for m in range(4):
+                        old_piece_i = pieces[i]
+                        old_piece_j = pieces[j]
+                        new_piece_i = pieces_gen_rotations[i][k]
+                        new_piece_j = pieces_gen_rotations[j][m]
+                        neigh, delta_swap = deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins)
+                        deux_swap_neigh.append((delta_swap,neigh))
+            else:
+                for m in range(4):
+                    old_piece_i = pieces[i]
+                    old_piece_j = pieces[j]
+                    new_piece_i = pieces[i]
+                    new_piece_j = pieces_gen_rotations[j][m]
+                    #print(deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins))
+                    neigh, delta_swap = deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins)
+                    deux_swap_neigh.append((delta_swap,neigh))
+
+            
+    return deux_swap_neigh
 
 def perturbations(pieces,ratio):
 
@@ -110,65 +120,102 @@ def deux_swap_with_worst_piece(pieces, puzzle, board_size):
     #print("nb_seul" ,conflict[index_worst])
     worst_piece, couleurs_des_voisins_worst = pieces[index_worst], couleurs_des_voisins[index_worst]
 
-    for i in range(n):
-        
-            couleurs_voisins_1 = couleurs_des_voisins[i]
-            couleurs_voisins_2 = couleurs_des_voisins_worst
-            piece1_old = pieces[i]
-            piece2_old = worst_piece
-            old_conflict = calcul_cout_swap(piece1_old, piece2_old, couleurs_voisins_1, couleurs_voisins_2)
-            #print("nb_avant" ,(old_conflict))
+
+    for j in range(n):
+        if j!=index_worst:
             for k in range(4):
                 for m in range(4):
-                    neigh = pieces.copy() 
-                    piece1 = pieces_gen_rotations[i][k]
-                    piece2 = pieces_gen_rotations[index_worst][m]
-                    
-                    neigh[i], neigh[index_worst] = piece2, piece1
-                    cout_swap = calcul_cout_swap(piece2, piece1, couleurs_voisins_1, couleurs_voisins_2) - old_conflict
-                    print(piece1_old, piece2_old,piece1,piece2,couleurs_voisins_1, couleurs_voisins_2, cout_swap)
-                    #print("nouveau_cout", cout_swap)
-                    deux_swap_neigh.append((cout_swap,neigh))
+                    i = index_worst
+                    old_piece_i = worst_piece
+                    old_piece_j = pieces[j]
+                    new_piece_i = pieces_gen_rotations[i][k]
+                    new_piece_j = pieces_gen_rotations[j][m]
+                    neigh, delta_swap, adj_ho, adj_ve, adj_rien = deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins)
+                    deux_swap_neigh.append((delta_swap,neigh,i,j, adj_ho, adj_ve, adj_rien)) 
+        
+        else:
+            for m in range(4):
+                i = index_worst
+                old_piece_i = worst_piece
+                old_piece_j = worst_piece
+                new_piece_i = worst_piece
+                new_piece_j = pieces_gen_rotations[j][m]
+                #print(deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins))
+                neigh, delta_swap, adj_ho, adj_ve, adj_rien = deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins)
+                deux_swap_neigh.append((delta_swap,neigh,i,j ,adj_ho, adj_ve, adj_rien))
+
     return deux_swap_neigh
 
-def deux_swap_random(pieces, puzzle, board_size):
-    print(pieces)
-
-    n = len(pieces)
-    couleurs_des_voisins = [couleurs_voisins(k, pieces, board_size) for k in range(n)]
-    conflict = [nb_conflits(pieces[i],couleurs_des_voisins[i]) for i in range(len(pieces))]
-
-    deux_swap_neigh = []
-    pieces_gen_rotations = [puzzle.generate_rotation(pieces[i]) for i in range(n)]
 
 
-    index_worst = np.argmax(conflict)
-    #print("nb_seul" ,conflict[index_worst])
-    worst_piece, couleurs_des_voisins_worst = pieces[index_worst], couleurs_des_voisins[index_worst]
+def deux_swap_delta(i,j,old_piece_i, old_piece_j, new_piece_i, new_piece_j,pieces, board_size, couleurs_des_voisins):
 
-    i = np.random.choice(n)
-    while i == index_worst:
-        i = np.random.choice(n)
+    #On teste d'abord si les cases sont adjacentes et si oui, horizontalement ou verticalement
+    indice_maximum = max(i,j)
+    indice_minimum = min(i,j)
+
+    couleurs_voisins_i = couleurs_des_voisins[i]
+    couleurs_voisins_j = couleurs_des_voisins[j]
+
+
+    correction_old = 0
+    correction_new = 0
+
+    neigh = pieces.copy()
+
+    adj_ho = False
+    adj_ve = False
+    adj_rien = False
+
+    #La même pièce
+    if i == j:
         
-    couleurs_voisins_1 = couleurs_des_voisins[i]
-    couleurs_voisins_2 = couleurs_des_voisins_worst
-    piece1_old = pieces[i]
-    piece2_old = worst_piece
-    old_conflict = calcul_cout_swap(piece1_old, piece2_old, couleurs_voisins_1, couleurs_voisins_2)
-    #print("nb_avant" ,(old_conflict))
-    for k in range(4):
-        m = 0
-        neigh = pieces.copy() 
-        piece1 = pieces_gen_rotations[i][k]
-        piece2 = pieces_gen_rotations[index_worst][m]
+        old_conflict = nb_conflits(old_piece_i, couleurs_voisins_i)
+        new_conflict = nb_conflits(new_piece_j, couleurs_voisins_i)
+
+        neigh[i] = new_piece_j
+        delta_swap= new_conflict - old_conflict
+
+        return neigh, delta_swap
+
+    #adjacence horizontale
+    elif (indice_maximum-indice_minimum) == 1 and (indice_maximum % board_size != 0 ):
+        adj_ho = True
+        if pieces[indice_maximum][OUEST]!=pieces[indice_minimum][EST]:
+            correction_old += 1
         
-        neigh[i], neigh[index_worst] = piece2, piece1
-        cout_swap = calcul_cout_swap(piece2, piece1, couleurs_voisins_1, couleurs_voisins_2) - old_conflict
-        print(piece1_old, piece2_old,piece1,piece2,couleurs_voisins_1, couleurs_voisins_2, cout_swap)
-            #print("nouveau_cout", cout_swap)
-        deux_swap_neigh.append((cout_swap,neigh))
-    return deux_swap_neigh
+        neigh[i], neigh[j] = new_piece_j, new_piece_i
+        if neigh[indice_maximum][OUEST]!=neigh[indice_minimum][EST]:
+            correction_new += 1
+
+        couleurs_voisins_i_adjacent = couleurs_voisins(i, neigh, board_size)
+        couleurs_voisins_j_adjacent = couleurs_voisins(j, neigh, board_size)
+
+
+    #adjacence verticale
+    elif indice_maximum-indice_minimum == board_size :
+        adj_ve = True
+        if pieces[indice_maximum][SUD]!=pieces[indice_minimum][NORD]:
+            correction_old += 1
+        neigh[i], neigh[j] = new_piece_j, new_piece_i
+        if neigh[indice_maximum][SUD]!=neigh[indice_minimum][NORD]:
+            correction_new += 1
+
+        couleurs_voisins_i_adjacent = couleurs_voisins(i, neigh, board_size)
+        couleurs_voisins_j_adjacent = couleurs_voisins(j, neigh, board_size)
+
+    # Pas d'adjacence
+    else:
+        adj_rien = True
+        neigh[i], neigh[j] = new_piece_j, new_piece_i
+        couleurs_voisins_i_adjacent = couleurs_voisins_i
+        couleurs_voisins_j_adjacent = couleurs_voisins_j
+
+    return neigh, (calcul_cout_swap(new_piece_j, new_piece_i, couleurs_voisins_i_adjacent, couleurs_voisins_j_adjacent)-correction_new - calcul_cout_swap(old_piece_i, old_piece_j, couleurs_voisins_i, couleurs_voisins_j) + correction_old)
+
+
     
+
 
 def couleurs_voisins(i : int,pieces : list[tuple],board_size : int):
     """
@@ -266,7 +313,7 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 360
+    time_credit = 60
     board_size = puzzle.board_size
     
 
@@ -290,46 +337,51 @@ def solve_advanced(eternity_puzzle):
         temp = 5
 
         
-        for i in tqdm(range(5000)):
+        for i in tqdm(range(80)):
 
 
             
-            if True:
-                # On choisit un voisin au hasard, et on le garde s'il est améliorant ou selon une probabilité dépendant de son coût et de la température.
+            # On choisit un voisin au hasard, et on le garde s'il est améliorant ou selon une probabilité dépendant de son coût et de la température.
+            choses = deux_swap(current_solution, puzzle,board_size)
+            print(min([truc[0] for truc in choses]))
+            solution_possibles = sorted(deux_swap(current_solution, puzzle,board_size), key=lambda k: k[0])
+            print(solution_possibles[0][0])
+            #solution_possibles = sorted(deux_swap_with_worst_piece(current_solution, puzzle,board_size), key=lambda k: k[0])
 
-                #solution_possibles = sorted(deux_swap(current_solution, puzzle,board_size), key=lambda k: k[0])
-                #solution_possibles = sorted(deux_swap_with_worst_piece(current_solution, puzzle,board_size), key=lambda k: k[0])
-                solution_possibles = sorted(deux_swap_random(current_solution, puzzle,board_size), key=lambda k: k[0])
-
-
+            
+            
+            
+            selected = False
+            k = 0
+            while not selected :
                 
+                solution = solution_possibles[k][1]
                 
-                selected = False
-                i = 0
-                while not selected :
+                if not solution in listeTabu:
+                    #print("cout_retenu",solution_possibles[i][0] )
+                    selected = True
+                    listeTabu.add(solution)
+                else : 
+
+                    k+=1
                     
-                    solution = solution_possibles[i][1]
-                    
-                    if not solution in listeTabu:
-                        print("cout_retenu",solution_possibles[i][0] )
-                        selected = True
-                        listeTabu.add(solution)
-                        
-                        n_conflict = puzzle.get_total_n_conflict(solution)
+            n_conflict = puzzle.get_total_n_conflict(solution)
 
-                        
+            
 
-                        delta = n_conflict - current_n_conflict
-                        print(delta)
+            delta = n_conflict - current_n_conflict
 
-                        if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
-                            # On choisit comme représentation courante le meilleur voisin
-                            current_solution, current_n_conflict = solution, n_conflict
+            
 
 
-                    else : 
+            if delta < 0 or np.random.random()<0.1:#or np.random.rand() < np.exp(-delta/temp):
+                # On choisit comme représentation courante le meilleur voisin
+                current_solution, current_n_conflict = solution, n_conflict
+                #print(current_n_conflict)
+            else : break
 
-                        i+=1
+
+                   
             
                 
 
@@ -347,24 +399,10 @@ def solve_advanced(eternity_puzzle):
 
 
 
-        print(best_n_conflict, best_n_conflict_restart, current_n_conflict)
+        
         iteration_duration = time() - t1
 
 
-    log_execution(dict_board_size_instance[eternity_puzzle.board_size],best_n_conflict,time()-t0)
+    #log_execution(dict_board_size_instance[eternity_puzzle.board_size],best_n_conflict,time()-t0)
     return  best_solution, best_n_conflict
 
-    for _ in range(n_iter):
-
-        puzzle = copy.deepcopy(eternity_puzzle)
-        random.shuffle(puzzle.piece_list) 
-
-        solution, n_conflict = solve_heuristic(puzzle)
-
-
-
-        if n_conflict < best_n_conflict:
-            best_solution = solution
-            best_n_conflict = n_conflict
-
-    return  best_solution, best_n_conflict
