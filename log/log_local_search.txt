@@ -8,3 +8,11 @@ Instance: B, Score: 6, Execution Time: 54.2927 seconds
 Instance: B, Score: 6, Execution Time: 111.6162 seconds
 Instance: B, Score: 9, Execution Time: 110.5820 seconds
 Instance: E, Score: 27, Execution Time: 3594.1926 seconds
+Instance: A, Score: 0, Execution Time: 114.2266 seconds
+Instance: B, Score: 6, Execution Time: 114.3914 seconds
+Instance: C, Score: 22, Execution Time: 113.5457 seconds
+Instance: C, Score: 21, Execution Time: 443.3132 seconds
+Instance: C, Score: 20, Execution Time: 890.2249 seconds
+Instance: D, Score: 23, Execution Time: 893.4612 seconds
+Instance: E, Score: 27, Execution Time: 888.5428 seconds
+Instance: complet, Score: 88, Execution Time: 1772.6495 seconds
