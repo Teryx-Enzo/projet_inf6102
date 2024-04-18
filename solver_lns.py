@@ -142,7 +142,7 @@ def greedy_replace(solution, tile, coords):
     return orientations[np.argmin(conflicts)]
 
 
-def reconstruct_randomized_greedy(solution, removed_elements):
+def reconstruct_randomized_greedy(solution, removed_elements,puzzle):
     """
     D
 
@@ -188,7 +188,7 @@ def reconstruct_randomized_greedy(solution, removed_elements):
 
 
 
-def reconstruct_deterministic_greedy(solution, removed_elements, return_pos = False):
+def reconstruct_deterministic_greedy(solution, removed_elements,puzzle, return_pos = False):
     """
     D
 
@@ -252,7 +252,7 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
     """
     """
     # On reconstruit de façon gloutonne en mettant dans le bon type de case (bords dans bords etc.)
-    current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, return_pos=True)
+    current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, puzzle,return_pos=True)
     current_n_conflict = evaluate(puzzle, current_sol)
     reconstructed_sol, best_n_conflict = current_sol, current_n_conflict
 
@@ -261,12 +261,12 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
 
     for _ in range(10):
         # Restarts
-        current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, return_pos=True)
+        current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, puzzle,return_pos=True)
         current_n_conflict = evaluate(puzzle, current_sol)
 
         best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
         
-        temp = 1
+        temp = 5
 
         for iter in range(300):
             # Sélection aléatoire d'un voisin selon solver_local_search.deux_swap_un_seul_valide
@@ -375,7 +375,7 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
                 if np.random.rand() < 0.25:
                     neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[np.random.randint(0,4)]
                 else:
-                    neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], neigh[pos1[0], pos1[1]]
+                    neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], current_sol[pos1[0], pos1[1]]
             
             # On remet à jour où se trouve désormais la tuile (de removed_elements)
             Pos[i][1] = pos2
@@ -390,12 +390,12 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
             if current_n_conflict < best_n_conflict_restart:
                 best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
 
-            temp *= 0.992
+            temp *= 0.98
 
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
             reconstructed_sol = best_solution_restart
-            print('REC best conflict', best_n_conflict)
+            #print('REC best conflict', best_n_conflict)
 
 
     return reconstructed_sol
@@ -435,8 +435,31 @@ def solve_advanced(eternity_puzzle):
 
     time_credit = 300
 
+    #Initialisation des fonctions de destruction
+    destruction_functions = [destroy, destroy_worst_tiles]
+
+    #Initialisation des fonctions de reconstruction
+    reconstruction_functions = [reconstruct_randomized_greedy, reconstruct_deterministic_greedy, reconstruct_local_search]
+    
+    #Initalisation des poids de mise à jour
+    psi = [1,0.8,0.6,0.1]
+    lambda_w = 0.97
+
     # Recherche
     while ((time()-t0) + iteration_duration) < time_credit - 5:
+
+        
+
+        
+        #Initialisaiton de poids pour l'alns
+
+        #rho_dest = np.array([1. for truc in destruction_functions])
+        rho_dest = np.array([3.,1.])
+
+        
+        #Initialisaiton de poids pour l'alns
+        rho_rec = np.array([1. for truc in reconstruction_functions])
+
         # Temps de début du restart
         t1 = time()
 
@@ -452,18 +475,51 @@ def solve_advanced(eternity_puzzle):
         d = 0.2
      
         for i in range(500):
-            print()
-            solution = reconstruct_local_search(*destroy_worst_tiles(current_solution, d), puzzle)
+            
+            
+            #choix fonction de destruction
+            total_weight_destruction = np.sum(rho_dest)
+            
+            #print( rho_dest / total_weight_destruction)
+            destruction_index = random.choices(range(len(rho_dest)), weights=rho_dest / total_weight_destruction, k=1)[0]
+            
+            destruction_function = destruction_functions[destruction_index]
+
+            #choix fonction de reconstruction
+            total_weight_reconstruction = np.sum(rho_rec)
+            #print(rho_rec / total_weight_reconstruction)
+            reconstruction_index = random.choices(range(len(rho_rec)), weights=rho_rec / total_weight_reconstruction, k=1)[0]
+            reconstruction_function = reconstruction_functions[reconstruction_index]
+
+            
+
+            solution = reconstruction_function(*destruction_function(current_solution, d), puzzle)
 
             # Acceptation éventuelle de la solution reconstruite
             n_conflict = evaluate(puzzle, solution)
             delta = n_conflict - current_n_conflict
 
             if delta <= 0:# or np.random.rand() < np.exp(-delta/temp):
+                index_maj = 1
+
                 current_solution, current_n_conflict = solution, n_conflict
 
+            else:
+                index_maj = 3
+
             if current_n_conflict < best_n_conflict_restart:
+                print(current_n_conflict)
+                index_maj = 0
+
                 best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
+
+            #MAJ des poids de selection de fonctions
+
+            rho_dest[destruction_index] = lambda_w*rho_dest[destruction_index] + (1-lambda_w)*psi[index_maj]
+
+  
+            rho_rec[reconstruction_index] = lambda_w*rho_rec[reconstruction_index] + (1-lambda_w)*psi[index_maj]
+
             
             temp *= 0.99
 

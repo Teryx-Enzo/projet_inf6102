@@ -164,7 +164,7 @@ def solve_local_search(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 3600
+    time_credit = 60
 
     # Recherche
     while ((time()-t0) + iteration_duration) < time_credit - 5:

@@ -16,3 +16,4 @@ Instance: C, Score: 20, Execution Time: 890.2249 seconds
 Instance: D, Score: 23, Execution Time: 893.4612 seconds
 Instance: E, Score: 27, Execution Time: 888.5428 seconds
 Instance: complet, Score: 88, Execution Time: 1772.6495 seconds
+Instance: B, Score: 11, Execution Time: 53.8366 seconds
