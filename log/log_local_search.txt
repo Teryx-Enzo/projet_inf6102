@@ -7,3 +7,4 @@ Instance: C, Score: 16, Execution Time: 1136.5678 seconds
 Instance: B, Score: 6, Execution Time: 54.2927 seconds
 Instance: B, Score: 6, Execution Time: 111.6162 seconds
 Instance: B, Score: 9, Execution Time: 110.5820 seconds
+Instance: E, Score: 27, Execution Time: 3594.1926 seconds

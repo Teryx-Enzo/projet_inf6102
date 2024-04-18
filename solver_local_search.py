@@ -12,8 +12,6 @@ from solver_heuristic import solve_heuristic
 
 GRIS = 0
 
-random.seed(2306632)
-
 dict_board_size_instance = {
     4 : 'A',
     7 : 'B',
@@ -29,22 +27,6 @@ def log_execution(instance, score, execution_time):
     # Write log message to file
     with open(path.join("log", "log_local_search.txt"), "a") as log_file:
         log_file.write(log_message)
-
-
-class Tabu:
-    def __init__(self, size: int):
-        self.size = size
-        self.tabuList = []
-
-    def add(self, element):
-        if len(self.tabuList) < self.size:
-            self.tabuList.append(copy.deepcopy(element))
-        else:
-            self.tabuList.pop(0)
-            self.tabuList.append(copy.deepcopy(element))
-
-    def __contains__(self, element):
-        return element in self.tabuList
 
 
 def deux_swap_un_seul_valide(pieces, puzzle):
@@ -80,9 +62,6 @@ def deux_swap_un_seul_valide(pieces, puzzle):
         # On échange les deux bords/coins en échangeant leurs rotations
         corn_edge_piece_1 = np.where(np.array(pieces[index_piece_1]) == 0)[0]
         corn_edge_piece_2 = np.where(np.array(pieces[index_piece_2]) == 0)[0]
-
-        #print(pieces[index_piece_1], corn_edge_piece_1)
-        #print(pieces[index_piece_2], corn_edge_piece_2)
 
         if np.allclose(corn_edge_piece_1, corn_edge_piece_2):
             # Même orientation (bords du même côté du plateau)
@@ -196,29 +175,24 @@ def solve_local_search(eternity_puzzle):
 
         current_solution, current_n_conflict = solve_heuristic(puzzle)
         best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
-        temp = 10
-
-        listeTabu = Tabu(20)
+        temp = 5
 
         for i in range(20000):
             # On choisit un voisin au hasard, et on le garde s'il est améliorant ou selon une probabilité dépendant de son coût et de la température.
             solution = deux_swap_un_seul_valide(current_solution, puzzle)   
 
-            if solution not in listeTabu:
-                listeTabu.add(solution)
-                n_conflict = puzzle.get_total_n_conflict(solution)
+            n_conflict = puzzle.get_total_n_conflict(solution)
 
-                delta = n_conflict - current_n_conflict
+            delta = n_conflict - current_n_conflict
 
-                if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
-                    current_solution, current_n_conflict = solution, n_conflict
+            if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
+                # On choisit comme représentation courante le meilleur voisin
+                current_solution, current_n_conflict = solution, n_conflict
 
-                    # On choisit comme représentation courante le meilleur voisin
-
-                if current_n_conflict < best_n_conflict_restart:
-                    best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
-                
-                temp *= 0.99
+            if current_n_conflict < best_n_conflict_restart:
+                best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
+            
+            temp *= 0.98
 
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
