@@ -4,6 +4,7 @@ import eternity_puzzle
 import solver_random
 import solver_heuristic
 import solver_local_search
+import solver_lns
 import solver_advanced
 
 
@@ -48,7 +49,7 @@ if __name__ == '__main__':
         solution, n_conflict = solver_local_search.solve_local_search(e)
     elif args.agent == "advanced":
         # Your nice agent (Phase 3 - main part of the project)
-        solution, n_conflict = solver_advanced.solve_advanced(e)
+        solution, n_conflict = solver_lns.solve_advanced(e)
     else:
         raise Exception("This agent does not exist")
     solving_time = round((time.time() - start_time) / 60,2)

@@ -80,8 +80,13 @@ def choix_piece(i,j,solution,pieces,puzzle:EternityPuzzle):
     k_nord = board_size * (i + 1) + j
 
     # On verifie si on doit renvoyer une piece du bord
-    if i == 0 or j==0 or i == board_size-1 or j == board_size -1:
-        pieces_possibles = [piece for piece in pieces if GRIS in piece]
+    conditions_bord = int(i == 0) + int(j==0) + int(i == board_size-1) + int(j == board_size -1)
+    
+    if conditions_bord == 2:
+        pieces_possibles = [piece for piece in pieces if GRIS in piece and np.count_nonzero(piece) == 2]
+        
+    elif conditions_bord == 1:
+        pieces_possibles = [piece for piece in pieces if GRIS in piece and np.count_nonzero(piece) == 3]
 
     else :
         pieces_possibles = [piece for piece in pieces if not GRIS in piece]
