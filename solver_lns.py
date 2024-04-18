@@ -6,6 +6,7 @@ from collections import deque
 from solver_heuristic import solve_heuristic
 from tqdm import tqdm
 from os import path
+from itertools import combinations
 
 GRIS = 0
 
@@ -134,7 +135,7 @@ def greedy_replace(solution, tile, coords):
     return orientations[np.argmin(conflicts)]
 
 
-def reconstruct(solution, removed_elements):
+def reconstruct_randomized_greedy(solution, removed_elements):
     """
     D
 
@@ -178,6 +179,102 @@ def reconstruct(solution, removed_elements):
 
     return reconstructed_sol
 
+
+
+def reconstruct_deterministic_greedy(solution, removed_elements):
+    """
+    D
+
+    Args:
+
+    Returns:
+    """
+    board_size = solution.shape[0]
+    reconstructed_sol = solution.copy()
+    to_reassign = np.where(reconstructed_sol[:, :, 0] == -1)
+    nonzero_per_removed_tile = np.count_nonzero(removed_elements, axis=1)
+
+    for e in np.transpose(to_reassign):
+        # print(e, nonzero_per_removed_tile)
+        if (np.allclose(e, np.array([0, 0])) or
+            np.allclose(e, np.array([0, board_size-1])) or
+            np.allclose(e, np.array([board_size-1, 0])) or
+            np.allclose(e, np.array([board_size-1, board_size-1]))):
+            # Dans un coin
+            # print('coin')
+            i = np.where(nonzero_per_removed_tile == 2)[0][0]
+
+        elif (e[0] == 0 or 
+              e[0] == board_size-1 or
+              e[1] == 0 or
+              e[1] == board_size-1):
+            # Sur un bord
+            # print('bord')
+            i = np.where(nonzero_per_removed_tile == 3)[0][0]
+
+        else:
+            # milieu
+            # print('milieu')
+            i = np.where(nonzero_per_removed_tile == 4)[0][0]
+
+        reconstructed_sol[e[0], e[1]] = greedy_replace(reconstructed_sol, removed_elements[i], e) 
+
+        nonzero_per_removed_tile = np.delete(nonzero_per_removed_tile, i, 0)
+        removed_elements = np.delete(removed_elements, i, 0)
+
+    return reconstructed_sol
+
+
+
+    
+def reconstruct_local_search(solution, removed_elements, puzzle):
+
+    current_sol  = reconstruct_deterministic_greedy(solution, removed_elements)
+    
+
+    current_n_conflict = evaluate(puzzle, current_sol)
+
+    best_sol, best_n_conflict = current_sol, current_n_conflict
+
+
+
+    for _ in range(5):
+
+        np.random.shuffle(removed_elements)
+        best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
+
+        current_sol = reconstruct_deterministic_greedy(solution, removed_elements)
+        current_n_conflict = evaluate(puzzle, current_sol)
+
+
+        temp = 10
+        for _ in range(10):
+
+            # On echange deux éléments de la liste
+            i1,i2  = random.choice(list(combinations(range(removed_elements.shape[0]),2)))
+            removed_elements[[i1,i2]] =  removed_elements[[i2,i1]]
+
+            # On reconstruit la solution de manière deterministe
+            sol = reconstruct_deterministic_greedy(solution, removed_elements)
+            n_conflict = evaluate(puzzle, current_sol)
+
+            delta = n_conflict - current_n_conflict
+
+            if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
+
+                current_sol, current_n_conflict = sol, n_conflict
+
+            if current_n_conflict < best_n_conflict_restart:
+                best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
+
+            temp *= 0.98
+
+
+        if best_n_conflict_restart < best_n_conflict:
+            best_n_conflict  = best_n_conflict_restart
+            best_sol = best_solution_restart
+
+    return best_sol
 
 
 def evaluate(puzzle, solution):
@@ -224,7 +321,9 @@ def solve_advanced(eternity_puzzle):
         d = 0.3
      
         for i in range(500):
-            solution = reconstruct(*destroy_worst_tiles(current_solution, d))
+
+            solution = reconstruct_local_search(*destroy_worst_tiles(current_solution, d), puzzle)
+            #solution = reconstruct_deterministic_greedy(*destroy_worst_tiles(current_solution, d))
 
             # Acceptation éventuelle de la solution reconstruite
             n_conflict = evaluate(puzzle, solution)
