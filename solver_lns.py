@@ -27,15 +27,50 @@ def log_execution(instance, score, execution_time):
     with open(path.join("log", "log_local_search.txt"), "a") as log_file:
         log_file.write(log_message)
 
-NORD = 0
-SUD = 1
-OUEST = 2
-EST = 3
+
+def conflicts_for_tile(solution, tile, coords):
+    """
+    Calcule le nombre de conflits pour la tuile (avec son orientation) à la position coords dans la solution.
+
+    Args:
+        solution (np.ndarray) : la représentation 2D de la solution
+        tile (np.ndarray or Tuple[int]) : la tuile avec son orientation
+        coords (np.ndarray or List[int]) : les coordonnées dans la solution
+
+    Returns:
+        conf (int) : le nombre de conflits pour la tuile tile aux coordonnées coords dans l'orientation donnée
+    """
+    board_size = solution.shape[0]
+
+    conf = 0
+
+    if coords[0] == 0:
+        # Ligne du haut : on veut que l'élément haut soit gris
+        conf += int(tile[0] != 0)
+    else:
+        conf += int(tile[0] != solution[coords[0]-1, coords[1], 1])
+
+    if coords[0] == board_size-1:
+        conf += int(tile[1] != 0)
+    else:
+        conf += int(tile[1] != solution[coords[0]+1, coords[1], 0])
+    
+    if coords[1] == 0:
+        conf += int(tile[2] != 0)
+    else:
+        conf += int(tile[2] != solution[coords[0], coords[1]-1, 3])
+
+    if coords[1] == board_size-1:
+        conf += int(tile[3] != 0)
+    else:
+        conf += int(tile[3] != solution[coords[0], coords[1]+1, 2])
+    
+    return conf
 
 
 def destroy(solution, degree: float):
     """
-    Destruction d'une solution
+    Destruction d'une solution en retirant degree% de pièces choisies aléatoirement.
 
     Args:
         solution
@@ -56,12 +91,37 @@ def destroy(solution, degree: float):
     return destroyed_sol, removed_elements
 
 
+def destroy_worst_tiles(solution, degree: float):
+    """
+    Destruction d'une solution en retirant degree% de pièces choisies selon leur nombre de conflits.
+
+    Args:
+        solution
+        degree (float) : poucentage de pièces à retirer
+
+    Returns:
+    """
+    destroyed_sol = solution.copy()
+    
+    n_tiles = np.product(solution.shape[:2])
+
+    p = np.array([1 + conflicts_for_tile(solution, solution[np.unravel_index(n, solution.shape[:2]) ], np.unravel_index(n, solution.shape[:2]) )
+                  for n in range(n_tiles)])
+    p = p/p.sum()
+
+    indexes = np.unravel_index(np.random.choice(n_tiles, size = int(degree*n_tiles), replace=False, p=p),
+                                                solution.shape[:2])
+
+    removed_elements = destroyed_sol[indexes]
+    destroyed_sol[indexes] = -1
+
+    return destroyed_sol, removed_elements
+
+
 def greedy_replace(solution, tile, coords):
     """
     Remet la tuile tile dans la solution aux coordonnées coordinates, dans l'orientation minimisant le mieux les conflits.
     """
-    board_size = solution.shape[0]
-
     initial_shape = tile
     rotation_90 = (tile[2], tile[3], tile[1], tile[0])
     rotation_180 = (tile[1], tile[0], tile[3], tile[2])
@@ -69,30 +129,7 @@ def greedy_replace(solution, tile, coords):
 
     orientations = [initial_shape, rotation_90, rotation_180, rotation_270]
 
-    conflicts = []
-    for orient in orientations:
-        conflicts.append(0)
-
-        if coords[0] == 0:
-            # Ligne du haut : on veut que l'élément haut soit gris
-            conflicts[-1] += int(orient[0] != 0)
-        else:
-            conflicts[-1] += int(orient[0] != solution[coords[0]-1, coords[1], 1])
-
-        if coords[0] == board_size-1:
-            conflicts[-1] += int(orient[1] != 0)
-        else:
-            conflicts[-1] += int(orient[1] != solution[coords[0]+1, coords[1], 0])
-        
-        if coords[1] == 0:
-            conflicts[-1] += int(orient[2] != 0)
-        else:
-            conflicts[-1] += int(orient[2] != solution[coords[0], coords[1]-1, 3])
-
-        if coords[1] == board_size-1:
-            conflicts[-1] += int(orient[3] != 0)
-        else:
-            conflicts[-1] += int(orient[3] != solution[coords[0], coords[1]+1, 2])
+    conflicts = [conflicts_for_tile(solution, orient, coords) for orient in orientations]
     
     return orientations[np.argmin(conflicts)]
 
@@ -110,10 +147,6 @@ def reconstruct(solution, removed_elements):
     reconstructed_sol = solution.copy()
     to_reassign = np.where(reconstructed_sol[:, :, 0] == -1)
     nonzero_per_removed_tile = np.count_nonzero(removed_elements, axis=1)
-
-    # print(solution)
-    # print(to_reassign)
-    # print(nonzero_per_removed_tile)
 
     for e in np.transpose(to_reassign):
         # print(e, nonzero_per_removed_tile)
@@ -188,9 +221,10 @@ def solve_advanced(eternity_puzzle):
         best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
 
         temp = 10
+        d = 0.3
      
         for i in range(500):
-            solution = reconstruct(*destroy(current_solution, 0.2))
+            solution = reconstruct(*destroy_worst_tiles(current_solution, d))
 
             # Acceptation éventuelle de la solution reconstruite
             n_conflict = evaluate(puzzle, solution)
