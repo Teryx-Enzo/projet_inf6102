@@ -2,16 +2,14 @@ import copy
 import numpy as np
 import random
 from time import time
-from collections import deque
 from solver_heuristic import solve_heuristic
 from tqdm import tqdm
 from os import path
 from itertools import combinations
 
-GRIS = 0
-
 random.seed(2306632)
 
+# LOG
 dict_board_size_instance = {
     4 : 'A',
     7 : 'B',
@@ -21,14 +19,23 @@ dict_board_size_instance = {
     16 : 'complet'
 }
 def log_execution(instance, score, execution_time):
+    """
+    Ajoute dans le fichier de log du solveur les performances obtenues.
+
+    Args:
+        instance (str) : le nom de l'instance résolue
+        score (int) : le nombre de conflits
+        execution_time (float) : le temps pris (pour base de comparaison)
+    """
     # Format log message
     log_message = f"Instance: {instance}, Score: {score}, Execution Time: {execution_time:.4f} seconds\n"
     
     # Write log message to file
-    with open(path.join("log", "log_local_search.txt"), "a") as log_file:
+    with open(path.join("log", "log_advanced.txt"), "a") as log_file:
         log_file.write(log_message)
 
 
+# RÉSOLUTION
 def conflicts_for_tile(solution, tile, coords):
     """
     Calcule le nombre de conflits pour la tuile (avec son orientation) à la position coords dans la solution.
@@ -49,22 +56,22 @@ def conflicts_for_tile(solution, tile, coords):
         # Ligne du haut : on veut que l'élément haut soit gris
         conf += int(tile[0] != 0)
     else:
-        conf += int(tile[0] != solution[coords[0]-1, coords[1], 1])
+        conf += int(tile[0] != solution[coords[0]-1, coords[1], 1] if solution[coords[0]-1, coords[1], 1] != -1 else 0)
 
     if coords[0] == board_size-1:
         conf += int(tile[1] != 0)
     else:
-        conf += int(tile[1] != solution[coords[0]+1, coords[1], 0])
+        conf += int(tile[1] != solution[coords[0]+1, coords[1], 0] if solution[coords[0]+1, coords[1], 0] != -1 else 0)
     
     if coords[1] == 0:
         conf += int(tile[2] != 0)
     else:
-        conf += int(tile[2] != solution[coords[0], coords[1]-1, 3])
+        conf += int(tile[2] != solution[coords[0], coords[1]-1, 3] if solution[coords[0], coords[1]-1, 3] != -1 else 0)
 
     if coords[1] == board_size-1:
         conf += int(tile[3] != 0)
     else:
-        conf += int(tile[3] != solution[coords[0], coords[1]+1, 2])
+        conf += int(tile[3] != solution[coords[0], coords[1]+1, 2] if solution[coords[0], coords[1]+1, 2] != -1 else 0)
     
     return conf
 
@@ -279,7 +286,14 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
 
 def evaluate(puzzle, solution):
     """
-    E
+    Évalue la solution encodée sous forme de matrice, en la remettant en forme souhaitée par le vérificateur de solutions.
+
+    Args:
+        puzzle (EternityPuzzle) : l'instance du puzzle en cours de résolution
+        solution (np.ndarray) : l'encodage de la solution sous forme de matrice board_size * board_size * 4
+    
+    Returns:
+        _ (int) : le nombre de conflits dans la solution
     """
     return puzzle.get_total_n_conflict(
         np.reshape(np.flip(solution, axis=0), newshape=(-1, 4))
@@ -318,11 +332,11 @@ def solve_advanced(eternity_puzzle):
         best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
 
         temp = 10
-        d = 0.3
+        d = 0.2
      
         for i in range(500):
 
-            solution = reconstruct_local_search(*destroy_worst_tiles(current_solution, d), puzzle)
+            solution = reconstruct_randomized_greedy(*destroy_worst_tiles(current_solution, d))
             #solution = reconstruct_deterministic_greedy(*destroy_worst_tiles(current_solution, d))
 
             # Acceptation éventuelle de la solution reconstruite
