@@ -6,6 +6,7 @@ import solver_heuristic
 import solver_local_search
 import solver_lns
 import solver_advanced
+from os import path
 
 
 def parse_arguments():
@@ -55,7 +56,7 @@ if __name__ == '__main__':
     solving_time = round((time.time() - start_time) / 60,2)
 
     e.display_solution(solution,args.visufile)
-    e.print_solution(solution, args.outfile)
+    e.print_solution(solution, path.join("solutions", args.agent, args.infile.split('/')[1]))
 
 
     print("***********************************************************")

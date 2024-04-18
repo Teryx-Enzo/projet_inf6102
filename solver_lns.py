@@ -75,22 +75,22 @@ def greedy_replace(solution, tile, coords):
 
         if coords[0] == 0:
             # Ligne du haut : on veut que l'élément haut soit gris
-            conflicts[-1] += 2*int(orient[0] != 0)
+            conflicts[-1] += int(orient[0] != 0)
         else:
             conflicts[-1] += int(orient[0] != solution[coords[0]-1, coords[1], 1])
 
         if coords[0] == board_size-1:
-            conflicts[-1] += 2*int(orient[1] != 0)
+            conflicts[-1] += int(orient[1] != 0)
         else:
             conflicts[-1] += int(orient[1] != solution[coords[0]+1, coords[1], 0])
         
         if coords[1] == 0:
-            conflicts[-1] += 2*int(orient[2] != 0)
+            conflicts[-1] += int(orient[2] != 0)
         else:
             conflicts[-1] += int(orient[2] != solution[coords[0], coords[1]-1, 3])
 
         if coords[1] == board_size-1:
-            conflicts[-1] += 2*int(orient[3] != 0)
+            conflicts[-1] += int(orient[3] != 0)
         else:
             conflicts[-1] += int(orient[3] != solution[coords[0], coords[1]+1, 2])
     
