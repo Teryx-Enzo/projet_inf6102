@@ -188,18 +188,26 @@ def reconstruct_randomized_greedy(solution, removed_elements):
 
 
 
-def reconstruct_deterministic_greedy(solution, removed_elements):
+def reconstruct_deterministic_greedy(solution, removed_elements, return_pos = False):
     """
     D
 
     Args:
+        solution (np.ndarray) : l'encodage de la solution (détruite) sous forme de matrice board_size * board_size * 4
+        removed_elements (np.ndarray) : les tuiles à replacer pour reconstruire la solution
+        return_pos (bool) : si vrai, on retourne en plus une liste indiquant où à été replacé chaque pièce (utilisé dans reconstruct_local_search)
 
     Returns:
+        reconstructed_sol (np.ndarray) : la solution reconstruite
+        pos (List[np.ndarray, np.ndarray]) : la liste indiquant les coordonnées (deuxième élément) où chaque pièce (premier élément) a été placée
     """
     board_size = solution.shape[0]
     reconstructed_sol = solution.copy()
     to_reassign = np.where(reconstructed_sol[:, :, 0] == -1)
     nonzero_per_removed_tile = np.count_nonzero(removed_elements, axis=1)
+
+    if return_pos:
+        Pos = []
 
     for e in np.transpose(to_reassign):
         # print(e, nonzero_per_removed_tile)
@@ -223,65 +231,174 @@ def reconstruct_deterministic_greedy(solution, removed_elements):
             # milieu
             # print('milieu')
             i = np.where(nonzero_per_removed_tile == 4)[0][0]
+        
+        reconstructed_sol[e[0], e[1]] = greedy_replace(reconstructed_sol, removed_elements[i], e)
 
-        reconstructed_sol[e[0], e[1]] = greedy_replace(reconstructed_sol, removed_elements[i], e) 
+        if return_pos:
+            Pos.append([removed_elements[i], e])
 
         nonzero_per_removed_tile = np.delete(nonzero_per_removed_tile, i, 0)
         removed_elements = np.delete(removed_elements, i, 0)
 
+    if return_pos:
+        return reconstructed_sol, Pos
+    
     return reconstructed_sol
 
 
 
     
 def reconstruct_local_search(solution, removed_elements, puzzle):
-
-    current_sol  = reconstruct_deterministic_greedy(solution, removed_elements)
-    
-
+    """
+    """
+    # On reconstruit de façon gloutonne en mettant dans le bon type de case (bords dans bords etc.)
+    current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, return_pos=True)
     current_n_conflict = evaluate(puzzle, current_sol)
+    reconstructed_sol, best_n_conflict = current_sol, current_n_conflict
 
-    best_sol, best_n_conflict = current_sol, current_n_conflict
+    n_removed_elements = removed_elements.shape[0]
+    board_size = solution.shape[0]
 
-
-
-    for _ in range(5):
-
-        np.random.shuffle(removed_elements)
-        best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
-
-        current_sol = reconstruct_deterministic_greedy(solution, removed_elements)
+    for _ in range(10):
+        # Restarts
+        current_sol, Pos = reconstruct_deterministic_greedy(solution, removed_elements, return_pos=True)
         current_n_conflict = evaluate(puzzle, current_sol)
 
+        best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
+        
+        temp = 1
 
-        temp = 10
-        for _ in range(10):
+        for iter in range(300):
+            # Sélection aléatoire d'un voisin selon solver_local_search.deux_swap_un_seul_valide
+            # Code sensiblement pareil jusqu'à 380.
+            neigh = current_sol.copy()
 
-            # On echange deux éléments de la liste
-            i1,i2  = random.choice(list(combinations(range(removed_elements.shape[0]),2)))
-            removed_elements[[i1,i2]] =  removed_elements[[i2,i1]]
+            # On choisit 2 pièces à échanger dont une parmi celles qu'on a replacé (removed_elements)
+            valid = False
+            corner_or_edge = False
+            while not valid:
+                # On tire une pièce qu'on a replacé
+                i = np.random.randint(n_removed_elements)
+                tile1, pos1 = Pos[i]
 
-            # On reconstruit la solution de manière deterministe
-            sol = reconstruct_deterministic_greedy(solution, removed_elements)
-            n_conflict = evaluate(puzzle, current_sol)
+                # On tire une autre pièce
+                pos2 = pos1
+                while np.allclose(pos1, pos2):
+                    pos2 = np.random.randint(0, board_size, 2)
+                tile2 = neigh[pos2[0], pos2[1]]
 
-            delta = n_conflict - current_n_conflict
+                # On garde cette sélection si les deux pièces sont de la même géométrie (bords, coins)
+                if np.count_nonzero(tile1) == np.count_nonzero(tile2):
+                    valid = True
+                    if np.count_nonzero(tile1) != 4:
+                        corner_or_edge = True
+            
+            if corner_or_edge:
+                # On échange les deux bords/coins en échangeant leurs rotations
+                corn_edge_tile_1 = np.where(np.array(neigh[pos1[0], pos1[1]]) == 0)[0]
+                corn_edge_tile_2 = np.where(np.array(neigh[pos2[0], pos2[1]]) == 0)[0]
+
+                if np.allclose(corn_edge_tile_1, corn_edge_tile_2):
+                    # Même orientation (bords du même côté du plateau)
+                    neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], current_sol[pos1[0], pos1[1]]
+
+                else:
+                    if len(corn_edge_tile_1) == 1:
+                        # Les deux pièces sont des bords
+                        if corn_edge_tile_1[0] + corn_edge_tile_2[0] == 1 or corn_edge_tile_1[0] + corn_edge_tile_2[0] == 5:
+                            # Les indices sont 0 et 1, ou 2 et 3 (bords opposés)
+                            neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[2], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[2]
+
+                        elif corn_edge_tile_1[0] + corn_edge_tile_2[0] == 2:
+                            # Bords haut et gauche
+                            if corn_edge_tile_1[0] == 0:
+                                # Pièce 1 est un bord haut : on doit la tourner de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+                            else:
+                                # Pièce 1 est un bord gauche : on doit la tourner de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+
+                        elif corn_edge_tile_1[0] + corn_edge_tile_2[0] == 4:
+                            # Bords bas et droite
+                            if corn_edge_tile_1[0] == 3:
+                                # Pièce 1 est un bord droit : on doit la tourner de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+                            else:
+                                # Pièce 1 est un bord bas : on doit la tourner de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+                        
+                        elif abs(corn_edge_tile_1[0] + corn_edge_tile_2[0] == 4) == 3:
+                            # Bords haut et droite
+                            if corn_edge_tile_1[0] == 0:
+                                # Pièce 1 est un bord haut : on doit la tourner de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+                            else:
+                                # Pièce 1 est un bord droit : on doit la tourner de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+                        
+                        else:
+                            # Bords bas et gauche
+                            if corn_edge_tile_1[0] == 1:
+                                # Pièce 1 est un bord bas : on doit la touner de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+                            else:
+                                # Pièce 1 est un bord droit : on doit la tourner de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+                    
+                    else:
+                        # Les deux pièces sont des coins
+                        if np.sum(corn_edge_tile_1 == corn_edge_tile_2) == 0:
+                            # Les deux pièces sont dans les coins opposés ; rotation de 180°
+                            neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[2], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[2]
+
+                        elif corn_edge_tile_1[0] == corn_edge_tile_2[0]:
+                            # np.where est séquentiel : les indices sont triés. 
+                            # Premiers éléments égaux <=> les premiers éléments sont 0 (coins haut-G et haut-D) ou 1 (coins bas-G et bas-D)
+                            if np.sum(corn_edge_tile_1) == 3:
+                                # On doit tourner la pièce 1 de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+                            else:
+                                # On doit tourner la pièce 2 de 270°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+                        
+                        else:
+                            # Premiers éléments diff <=> les deuxièmes éléments sont 2 (coins haut-G et bas-G) ou 3 (coins haut-D et bas-D)
+                            if np.sum(corn_edge_tile_1) == 3:
+                                # On doit tourner la pièce 1 de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[3], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[1]
+                            else:
+                                # On doit tourner la pièce 2 de 90°
+                                neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = puzzle.generate_rotation(current_sol[pos2[0], pos2[1]])[1], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[3]
+
+            else:
+                # Les deux pièces sont des pièces internes : on les échange en faisant éventuellement une rotation de l'une dans 25% des cas
+                if np.random.rand() < 0.25:
+                    neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[np.random.randint(0,4)]
+                else:
+                    neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], neigh[pos1[0], pos1[1]]
+            
+            # On remet à jour où se trouve désormais la tuile (de removed_elements)
+            Pos[i][1] = pos2
+
+            # Recuit simulé
+            neigh_conflicts = evaluate(puzzle, neigh)
+            delta = neigh_conflicts - current_n_conflict
 
             if delta <= 0 or np.random.rand() < np.exp(-delta/temp):
-
-                current_sol, current_n_conflict = sol, n_conflict
+                current_sol, current_n_conflict = neigh, neigh_conflicts
 
             if current_n_conflict < best_n_conflict_restart:
                 best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
 
-            temp *= 0.98
-
+            temp *= 0.992
 
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
-            best_sol = best_solution_restart
+            reconstructed_sol = best_solution_restart
+            print('REC best conflict', best_n_conflict)
 
-    return best_sol
+
+    return reconstructed_sol
 
 
 def evaluate(puzzle, solution):
@@ -335,9 +452,8 @@ def solve_advanced(eternity_puzzle):
         d = 0.2
      
         for i in range(500):
-
-            solution = reconstruct_randomized_greedy(*destroy_worst_tiles(current_solution, d))
-            #solution = reconstruct_deterministic_greedy(*destroy_worst_tiles(current_solution, d))
+            print()
+            solution = reconstruct_local_search(*destroy_worst_tiles(current_solution, d), puzzle)
 
             # Acceptation éventuelle de la solution reconstruite
             n_conflict = evaluate(puzzle, solution)
