@@ -78,10 +78,12 @@ def destroy(solution, degree: float):
     Destruction d'une solution en retirant degree% de pièces choisies aléatoirement.
 
     Args:
-        solution
-        degree (float) : poucentage de pièces à retirer
+        solution (np.ndarray) : l'encodage de la solution (à détruire) sous forme de matrice board_size * board_size * 4
+        degree (float) : proportion de pièces à retirer
 
     Returns:
+        destroyed_sol (np.ndarray) : l'encodage de la solution (détruite)
+        removed_elements (np.ndarray) : les tuiles retirées de la solution
     """
     destroyed_sol = solution.copy()
 
@@ -98,13 +100,15 @@ def destroy(solution, degree: float):
 
 def destroy_worst_tiles(solution, degree: float):
     """
-    Destruction d'une solution en retirant degree% de pièces choisies selon leur nombre de conflits.
+    Destruction d'une solution en retirant degree% de pièces choisies selon leur nombre de conflits (priorité aux pièces avec le plus de conflits).
 
     Args:
-        solution
-        degree (float) : poucentage de pièces à retirer
+        solution (np.ndarray) : l'encodage de la solution (à détruire) sous forme de matrice board_size * board_size * 4
+        degree (float) : proportion de pièces à retirer
 
     Returns:
+        destroyed_sol (np.ndarray) : l'encodage de la solution (détruite)
+        removed_elements (np.ndarray) : les tuiles retirées de la solution
     """
     destroyed_sol = solution.copy()
     
@@ -126,6 +130,14 @@ def destroy_worst_tiles(solution, degree: float):
 def greedy_replace(solution, tile, coords):
     """
     Remet la tuile tile dans la solution aux coordonnées coordinates, dans l'orientation minimisant le mieux les conflits.
+
+    Args:
+        solution (np.ndarray) : l'encodage de la solution sous forme de matrice board_size * board_size * 4
+        tile (np.ndarray ou Tuple[int, int, int, int]) : la tuile à replacer
+        coords (np.ndarray ou List[int, int]) : les coordonnées ou placer la tuile
+
+    Returns:
+        best_orientation Tuple[int, int, int, int] : l'orientation de tile minimisant le plus les conflits dans la case coords
     """
     initial_shape = tile
     rotation_90 = (tile[2], tile[3], tile[1], tile[0])
@@ -139,13 +151,17 @@ def greedy_replace(solution, tile, coords):
     return orientations[np.argmin(conflicts)]
 
 
-def reconstruct_randomized_greedy(solution, removed_elements,puzzle):
+def reconstruct_randomized_greedy(solution, removed_elements, puzzle):
     """
-    D
+    Reconstruit la solution plaçant les tuiles de removed_elements dans un ordre aléatoire. Lors du placement d'une tuile, on la place de sorte à minimiser au mieux les conflits.
 
     Args:
+        solution (np.ndarray) : l'encodage de la solution (détruite) sous forme de matrice board_size * board_size * 4
+        removed_elements (np.ndarray) : les tuiles à replacer pour reconstruire la solution
+        puzzle (EternityPuzzle) : l'instance du puzzle en cours de résolution
 
     Returns:
+        reconstructed_sol (np.ndarray) : la solution reconstruite
     """
     board_size = solution.shape[0]
 
@@ -181,13 +197,14 @@ def reconstruct_randomized_greedy(solution, removed_elements,puzzle):
 
 
 
-def reconstruct_deterministic_greedy(solution, removed_elements,puzzle, return_pos = False):
+def reconstruct_deterministic_greedy(solution, removed_elements, puzzle, return_pos = False):
     """
-    D
+    Reconstruit la solution plaçant les tuiles de removed_elements dans l'ordre. Lors du placement d'une tuile, on la place de sorte à minimiser au mieux les conflits.
 
     Args:
         solution (np.ndarray) : l'encodage de la solution (détruite) sous forme de matrice board_size * board_size * 4
         removed_elements (np.ndarray) : les tuiles à replacer pour reconstruire la solution
+        puzzle (EternityPuzzle) : l'instance du puzzle en cours de résolution
         return_pos (bool) : si vrai, on retourne en plus une liste indiquant où à été replacé chaque pièce (utilisé dans reconstruct_local_search)
 
     Returns:
@@ -239,6 +256,17 @@ def reconstruct_deterministic_greedy(solution, removed_elements,puzzle, return_p
     
 def reconstruct_local_search(solution, removed_elements, puzzle):
     """
+    Reconstruit la solution plaçant les tuiles de removed_elements selon reconstruct_deterministic_greedy.
+    Fait ensuite un hill climbing en considérant les 2-swaps de 2 pièces.
+
+    Args:
+        solution (np.ndarray) : l'encodage de la solution (détruite) sous forme de matrice board_size * board_size * 4
+        removed_elements (np.ndarray) : les tuiles à replacer pour reconstruire la solution
+        puzzle (EternityPuzzle) : l'instance du puzzle en cours de résolution
+        return_pos (bool) : si vrai, on retourne en plus une liste indiquant où à été replacé chaque pièce (utilisé dans reconstruct_local_search)
+
+    Returns:
+        reconstructed_sol (np.ndarray) : la solution reconstruite
     """
     # On reconstruit de façon gloutonne en mettant dans le bon type de case (bords dans bords etc.)
     current_sol = solution.copy()
@@ -415,7 +443,7 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 1800
+    time_credit = 3600
 
     #Initialisation des fonctions de destruction
     destruction_functions = [destroy, destroy_worst_tiles]
@@ -502,8 +530,9 @@ def solve_advanced(eternity_puzzle):
     log_execution(dict_board_size_instance[eternity_puzzle.board_size], best_n_conflict, time()-t0)
 
     # Mise en forme pour la visualisation
-    best_solution = [
-        tuple(e) for e in np.reshape(np.flip(best_solution, axis=0), newshape=(-1, 4))
-    ]
+    if n != 4:  # L'heuristique donne déjà 0 pour l'instance A :)
+        best_solution = [
+            tuple(e) for e in np.reshape(np.flip(best_solution, axis=0), newshape=(-1, 4))
+        ]
 
-    return  best_solution, best_n_conflict
+    return best_solution, best_n_conflict
