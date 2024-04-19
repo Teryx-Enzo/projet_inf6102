@@ -3,11 +3,8 @@ import numpy as np
 import random
 from time import time
 from solver_heuristic import solve_heuristic
-from tqdm import tqdm
 from os import path
-from itertools import combinations
 
-random.seed(2306632)
 
 # LOG
 dict_board_size_instance = {
@@ -157,13 +154,11 @@ def reconstruct_randomized_greedy(solution, removed_elements,puzzle):
     nonzero_per_removed_tile = np.count_nonzero(removed_elements, axis=1)
 
     for e in np.transpose(to_reassign):
-        # print(e, nonzero_per_removed_tile)
         if (np.allclose(e, np.array([0, 0])) or
             np.allclose(e, np.array([0, board_size-1])) or
             np.allclose(e, np.array([board_size-1, 0])) or
             np.allclose(e, np.array([board_size-1, board_size-1]))):
             # Dans un coin
-            # print('coin')
             i = np.random.choice(np.where(nonzero_per_removed_tile == 2)[0])
 
         elif (e[0] == 0 or 
@@ -171,12 +166,10 @@ def reconstruct_randomized_greedy(solution, removed_elements,puzzle):
               e[1] == 0 or
               e[1] == board_size-1):
             # Sur un bord
-            # print('bord')
             i = np.random.choice(np.where(nonzero_per_removed_tile == 3)[0])
 
         else:
             # milieu
-            # print('milieu')
             i = np.random.choice(np.where(nonzero_per_removed_tile == 4)[0])
 
         reconstructed_sol[e[0], e[1]] = greedy_replace(reconstructed_sol, removed_elements[i], e) 
@@ -210,13 +203,11 @@ def reconstruct_deterministic_greedy(solution, removed_elements,puzzle, return_p
         Pos = []
 
     for e in np.transpose(to_reassign):
-        # print(e, nonzero_per_removed_tile)
         if (np.allclose(e, np.array([0, 0])) or
             np.allclose(e, np.array([0, board_size-1])) or
             np.allclose(e, np.array([board_size-1, 0])) or
             np.allclose(e, np.array([board_size-1, board_size-1]))):
             # Dans un coin
-            # print('coin')
             i = np.where(nonzero_per_removed_tile == 2)[0][0]
 
         elif (e[0] == 0 or 
@@ -224,12 +215,10 @@ def reconstruct_deterministic_greedy(solution, removed_elements,puzzle, return_p
               e[1] == 0 or
               e[1] == board_size-1):
             # Sur un bord
-            # print('bord')
             i = np.where(nonzero_per_removed_tile == 3)[0][0]
 
         else:
             # milieu
-            # print('milieu')
             i = np.where(nonzero_per_removed_tile == 4)[0][0]
         
         reconstructed_sol[e[0], e[1]] = greedy_replace(reconstructed_sol, removed_elements[i], e)
@@ -372,11 +361,6 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
             else:
                 neigh[pos1[0], pos1[1]] = greedy_replace(current_sol, current_sol[pos2[0], pos2[1]], [pos1[0], pos1[1]])
                 neigh[pos2[0], pos2[1]] = greedy_replace(current_sol, current_sol[pos1[0], pos1[1]], [pos2[0], pos2[1]])
-                # Les deux pièces sont des pièces internes : on les échange en faisant éventuellement une rotation de l'une dans 25% des cas
-                # if np.random.rand() < 0.25:
-                #     neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], puzzle.generate_rotation(current_sol[pos1[0], pos1[1]])[np.random.randint(0,4)]
-                # else:
-                #     neigh[pos1[0], pos1[1]], neigh[pos2[0], pos2[1]] = current_sol[pos2[0], pos2[1]], current_sol[pos1[0], pos1[1]]
             
             # On remet à jour où se trouve désormais la tuile (de removed_elements)
             Pos[i][1] = pos2
@@ -390,12 +374,10 @@ def reconstruct_local_search(solution, removed_elements, puzzle):
 
             if current_n_conflict < best_n_conflict_restart:
                 best_solution_restart, best_n_conflict_restart = current_sol, current_n_conflict
-                print(best_n_conflict_restart)
 
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
             reconstructed_sol = best_solution_restart
-            #print('REC best conflict', best_n_conflict)
 
 
     return reconstructed_sol
@@ -433,7 +415,7 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 300
+    time_credit = 15
 
     #Initialisation des fonctions de destruction
     destruction_functions = [destroy, destroy_worst_tiles]
@@ -447,24 +429,15 @@ def solve_advanced(eternity_puzzle):
 
     # Recherche
     while ((time()-t0) + iteration_duration) < time_credit - 5:
-
-        
-
-        
-        #Initialisaiton de poids pour l'alns
-
-        #rho_dest = np.array([1. for truc in destruction_functions])
+        #Initialisaiton de poids pour l'ALNS
         rho_dest = np.array([3.,1.])
-
-        
-        #Initialisaiton de poids pour l'alns
         rho_rec = np.array([1. for truc in reconstruction_functions])
 
         # Temps de début du restart
         t1 = time()
 
         puzzle = copy.deepcopy(eternity_puzzle)
-        #restart aléatoire depuis la solution initiale
+        # Restart aléatoire depuis la solution initiale
         random.shuffle(puzzle.piece_list)
 
         current_solution, current_n_conflict = solve_heuristic(puzzle)
@@ -474,24 +447,18 @@ def solve_advanced(eternity_puzzle):
         temp = 10
         d = 0.1
      
-        for i in range(500):
-            
-            
-            #choix fonction de destruction
+        for _ in range(20):
+            # Choix fonction de destruction
             total_weight_destruction = np.sum(rho_dest)
             
-            #print( rho_dest / total_weight_destruction)
             destruction_index = random.choices(range(len(rho_dest)), weights=rho_dest / total_weight_destruction, k=1)[0]
             
             destruction_function = destruction_functions[destruction_index]
 
-            #choix fonction de reconstruction
+            # Choix fonction de reconstruction
             total_weight_reconstruction = np.sum(rho_rec)
-            #print(rho_rec / total_weight_reconstruction)
             reconstruction_index = random.choices(range(len(rho_rec)), weights=rho_rec / total_weight_reconstruction, k=1)[0]
             reconstruction_function = reconstruction_functions[reconstruction_index]
-
-            
 
             solution = reconstruction_function(*destruction_function(current_solution, d), puzzle)
 
@@ -508,12 +475,11 @@ def solve_advanced(eternity_puzzle):
                 index_maj = 3
 
             if current_n_conflict < best_n_conflict_restart:
-                print(current_n_conflict)
                 index_maj = 0
 
                 best_solution_restart, best_n_conflict_restart = current_solution, current_n_conflict
 
-            #MAJ des poids de selection de fonctions
+            # MÀJ des poids de selection de fonctions
 
             rho_dest[destruction_index] = lambda_w*rho_dest[destruction_index] + (1-lambda_w)*psi[index_maj]
 
@@ -526,11 +492,12 @@ def solve_advanced(eternity_puzzle):
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
             best_solution = best_solution_restart
-            print(best_n_conflict)
+        
+        if best_n_conflict == 0: break
         
         iteration_duration = time() - t1
 
-    #log_execution(dict_board_size_instance[eternity_puzzle.board_size], best_n_conflict, time()-t0)
+    log_execution(dict_board_size_instance[eternity_puzzle.board_size], best_n_conflict, time()-t0)
 
     # Mise en forme pour la visualisation
     best_solution = [
