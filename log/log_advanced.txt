@@ -37,3 +37,5 @@ Instance: B, Score: 9, Execution Time: 285.9982 seconds
 Instance: A, Score: 0, Execution Time: 13.8359 seconds
 Instance: A, Score: 0, Execution Time: 8.9530 seconds
 Instance: B, Score: 7, Execution Time: 13.2548 seconds
+Instance: C, Score: 13, Execution Time: 1758.8271 seconds
+Instance: D, Score: 20, Execution Time: 1390.0714 seconds

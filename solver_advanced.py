@@ -415,7 +415,7 @@ def solve_advanced(eternity_puzzle):
     t0 = time()
     iteration_duration = 0
 
-    time_credit = 15
+    time_credit = 1800
 
     #Initialisation des fonctions de destruction
     destruction_functions = [destroy, destroy_worst_tiles]
@@ -447,7 +447,7 @@ def solve_advanced(eternity_puzzle):
         temp = 10
         d = 0.1
      
-        for _ in range(20):
+        for _ in range(1000):
             # Choix fonction de destruction
             total_weight_destruction = np.sum(rho_dest)
             
@@ -492,6 +492,8 @@ def solve_advanced(eternity_puzzle):
         if best_n_conflict_restart < best_n_conflict:
             best_n_conflict  = best_n_conflict_restart
             best_solution = best_solution_restart
+
+            print(best_n_conflict)
         
         if best_n_conflict == 0: break
         
